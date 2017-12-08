@@ -5,8 +5,6 @@
  */
 'use strict';
 
-const fs = require('fs');
-
 const binding = require('./dist/crc');
 
 const raw = {
@@ -66,37 +64,4 @@ module.exports.crc64 = function(buff, prev) {
     binding._free(buffPtr);
 
     return ret;
-};
-
-module.exports.crc64File = function(filename, callback) {
-    let errored = false;
-    const stream = fs.createReadStream(filename);
-    const crcPtr = strToUint64Ptr('0');
-    let crcPtrFreed = false;
-    stream.on('error', function(err) {
-        errored = true;
-        stream.destroy();
-        if(!crcPtrFreed) {
-            binding._free(crcPtr);
-            crcPtrFreed = true;
-        }
-        return callback(err);
-    });
-
-    stream.on('data', function(chunk) {
-        const buffPtr = buffToPtr(chunk);
-        raw.crc64(crcPtr, buffPtr, chunk.length);
-        binding._free(buffPtr);
-    });
-    stream.on('end', function() {
-        if(errored) return;
-
-        const ret = uint64PtrToStr(crcPtr);
-        if(!crcPtrFreed) {
-            binding._free(crcPtr);
-            crcPtrFreed = true;
-        }
-
-        return callback(undefined, ret);
-    });
 };
